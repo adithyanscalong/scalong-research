@@ -1,8 +1,17 @@
 # Orgworkspace — Google OAuth Production Verification Guide
 
 **Purpose:** Get Orgworkspace's Google connectors (Gmail, Drive, Calendar, Sheets) approved and reliable for external production users.  
-**Updated:** 23 October 2026  
+**Updated and official references checked:** 26 October 2026  
 **Status:** Implementation checklist; actual OAuth scopes, data flows, and approval status must be confirmed by engineering.
+
+## Current Orgworkspace status
+
+- User-confirmed: the application/login page exists and Gmail authentication succeeds after bypassing Google's warning. Successful API calls and token refresh are not yet verified.
+- User's latest clarification: **no qualifying public product homepage exists**. Create one; earlier discussion about a Scalong homepage must not be treated as evidence that this requirement is satisfied.
+- Identified connectors: Gmail, Drive, and Sheets. Calendar below is an optional example, not a confirmed implemented connector.
+- Screenshots confirm the unverified warning. Exact Cloud verification status, requested scopes, privacy policy, domain verification, security controls, demo and assessment status remain unknown.
+- Track work in [verification TODO](Orgworkspace_Google_Verification_TODO.md) and obtain missing details using [questions for seniors](Orgworkspace_Google_Verification_Questions_For_Seniors.md).
+- This is a readiness guide, not evidence of approval or a completed implementation audit. Google may request additional evidence for the actual scopes and architecture.
 
 ## 1. What the screenshots mean
 
@@ -16,6 +25,8 @@ Google displays **“This app hasn't been verified”** because Orgworkspace is 
 You need all three.
 
 ## 2. Decide the verification path
+
+Check Google's documented verification exceptions first. Serving business customers outside our own Workspace organization does not by itself qualify for the internal-only exception. Record any claimed exception and its supporting evidence.
 
 | What Orgworkspace requests | Typical requirement |
 |---|---|
@@ -35,6 +46,10 @@ You need all three.
 | Drive read all files | `drive.readonly` | Restricted |
 | Drive full access | `drive` | Restricted |
 | Calendar read | `calendar.readonly` | Sensitive |
+| Sheets read | `spreadsheets.readonly` | Sensitive |
+| Sheets read/edit/create/delete | `spreadsheets` | Sensitive |
+
+The Sheets API also supports `drive.file` for files used with the app; consider this narrower alternative where it supports the implemented feature. Sheets scopes apply to spreadsheet files, not individual tabs. See [Sheets scope documentation](https://developers.google.com/workspace/sheets/api/scopes).
 
 Full scope strings normally begin with `https://www.googleapis.com/auth/`. **Do not request broader scopes simply to support hypothetical future workflows.** Confirm other scopes (Sheets, Contacts, etc.) against their official API scope documentation.
 
@@ -66,6 +81,14 @@ Before submission, publish:
 
 Privacy statements must match actual backend behavior. Do not claim “no data stored” if messages, workflow logs, embeddings, caches, or traces retain content.
 
+Website acceptance checks:
+
+- Host the privacy policy within the homepage's domain, link it visibly from the homepage, and configure the identical policy URL in OAuth branding.
+- A Scalong product page may link to an Orgworkspace application on another domain if the product relationship is clear. This is not automatic approval: identify Orgworkspace clearly, verify all authorized domains, and use consistent branding. A generic company page or redirect to login does not substitute for product information.
+- A project Owner/Editor must verify ownership of authorized domains through Search Console. Follow the Google branding guidelines for Google connection/sign-in buttons.
+- Provide user help explaining how to manage and delete data. Publish an affirmative statement that Google Workspace data use complies with Google's User Data Policy, including Limited Use restrictions; ensure the statement matches actual behavior.
+- Terms of service are recommended; they are not a universal prerequisite for every OAuth verification request.
+
 ## 5. Special requirements for an n8n-style AI agent platform
 
 Google reviews **actual data movement**, not just connector names.
@@ -88,6 +111,13 @@ Document:
 
 **Practical architecture improvements:** Use incremental, connector-specific consent; prefer `gmail.send` over mailbox-wide permissions for send-only workflows; prefer `drive.file` with a file picker over full-Drive access where feasible; make external data destinations visible and controllable; isolate each tenant's credentials and data.
 
+Policy checks that must be explicit in the audit:
+
+- Disclosures must clearly explain the actual data access and transfers. Where additional prominent disclosure is required, show it immediately before affirmative consent and before collecting the data; a privacy-policy link alone is insufficient.
+- Limited Use covers derived data too. Prohibited uses include selling data and advertising-related uses. Restrict human access to Google's allowed exceptions and document applicable consent.
+- Do not use or transfer Workspace data to train or improve general-purpose/shared AI models. The policy's specific-user personalized-model allowance is narrow; ordinary OAuth consent does not establish compliance. Check provider contracts/settings and permitted purpose before relying on it.
+- Review storage, caching, embeddings and permanent-copy behavior against applicable API terms and cache restrictions, not just the retention period selected by the team.
+
 ## 6. Security assessment preparation (restricted scopes)
 
 If restricted Google data is accessed from or transmitted through Orgworkspace servers, Google generally requires an **independent, Google-approved security assessment** using the CASA framework. Plan for periodic reassessment (typically at least every 12 months).
@@ -102,6 +132,8 @@ Prepare evidence of:
 - Data minimization, retention schedules, account disconnect, deletion workflows.
 - Dependency scanning, vulnerability management, incident response, and backups.
 - Third-party AI/service data-handling contracts and restrictions.
+- Prompt injection protection for agents handling untrusted Google content; encryption of Google data and credentials at rest, modern secure transport, and appropriate key management.
+- An incident-response process that meets Google's current notification requirements; assign a security owner to check the applicable policy deadlines and reporting channel.
 
 The assessor will specify the actual testing scope and remediation requirements. **Do not treat this list as a substitute for the assessment.**
 
@@ -110,12 +142,14 @@ The assessor will specify the actual testing scope and remediation requirements.
 Record the real Orgworkspace production-like app, with consistent branding:
 
 1. Show the homepage and the user-facing Google connector setup.
+   If the homepage is on Scalong and the app is on Orgworkspace, show that navigation and explain that Orgworkspace is a Scalong product. Keep submitted app identity consistent throughout.
 2. Start Google OAuth; show the **entire consent screen in English**, including requested permissions.
 3. Connect a Google account and return successfully to Orgworkspace.
 4. Build and execute **multiple representative workflows**, for example:
    - Gmail → AI summary → approved destination.
    - User-selected Drive file → document extraction → agent output.
    - Calendar read → agent → Gmail send.
+   For the confirmed Sheets connector, show a real implemented spreadsheet read/write workflow instead of an unimplemented example. Multiple workflows are useful when needed to cover scopes; Google requires coverage of actual scope-dependent functionality, not a fixed number of workflows.
 5. Show **direction of data flow**, destination disclosures, and relevant user consent.
 6. Show actual functionality requiring each sensitive/restricted scope; explain why narrower scopes do not suffice.
 7. If applicable, demonstrate **separate explicit consent for permitted personalized AI training**.
@@ -137,6 +171,10 @@ Use test accounts and non-sensitive test data. Upload the recording as **Unliste
 6. Respond promptly to Google review emails; correct scopes, product behavior, policy text, or videos if requested.
 7. If Google requires a CASA security assessment, engage an approved assessor, fix findings, and provide the resulting assessment evidence.
 8. Confirm approval for **every scope used in production**, set/maintain the appropriate **In production** publishing status, and test the full OAuth and connector flows with external accounts.
+
+Before submission, record project ID, runtime client IDs, requested scope strings, each scope's classification, feature justification, narrower-alternative analysis, demo timestamp, data destinations, and owner. Supply reviewer instructions/access if requested without exposing production secrets or customer data. Follow the current Verification Center flow; sensitive-scope review can include brand verification as a subset rather than always requiring two separate submissions.
+
+After approval, maintain monitored contacts and any applicable annual assessment (at least every 12 months from assessment approval for covered apps). Branding edits may require verification and publishing again; new sensitive/restricted scopes require the applicable review before relying on their approval. Workspace administrators may still restrict access independently of verification.
 
 **Warning:** Switching the app to “In production” by itself does **not** make it verified.
 
@@ -193,6 +231,14 @@ Test with a new external Google account after approval:
 6. [Google — Drive scopes](https://developers.google.com/workspace/drive/api/guides/api-specific-auth)
 7. [Google — Workspace API User Data and Developer Policy](https://developers.google.com/workspace/workspace-api-user-data-developer-policy)
 8. [Google — OAuth token behavior](https://developers.google.com/identity/protocols/oauth2/)
+9. [Google — Brand verification](https://developers.google.com/identity/protocols/oauth2/production-readiness/brand-verification)
+10. [Google — Sheets scopes](https://developers.google.com/workspace/sheets/api/scopes)
+
+## 13. Documentation audit — 26 October 2026
+
+The existing guide covered branding, scope minimization, Cloud setup, AI data flows, assessment preparation, demo evidence, submission and acceptance testing. This revision adds current confirmed/unknown status, homepage absence, same-domain privacy-policy placement, cross-domain navigation guidance, Sheets scopes, exceptions, Limited Use disclosure, human-access/training restrictions, prompt injection protection, reviewer evidence and post-approval maintenance.
+
+Coverage is sufficient as a working preparation guide for the identified Gmail/Drive/Sheets use case. Readiness is **not confirmed** until engineering supplies the actual scopes/configuration and the team validates implementation against current official policies. Scope-specific requirements and Google's reviewer feedback take precedence over this checklist.
 
 ---
 

@@ -1,12 +1,14 @@
 # WhatsApp Connector Study — OrgWorkspace
 
 **Reviewed:** 22 October 2026  
-**Decision:** Proceed with an official Business Platform pilot, subject to use-case eligibility and security checks. Do not expand the unofficial personal-account bridge as a default production offering.
+**Status updated:** 26 October 2026  
+**Status:** Research ongoing; no integration approach, migration, pilot, or code fixes have been approved.  
+**Pending clarification:** Why is personal WhatsApp specifically needed, which capabilities are essential, and what is its priority?
 
 ## 1. Executive assessment
 
 - Personal-account automation works technically through an unofficial linked-device client. It carries unresolved authorization, account-restriction, compatibility, and data-protection risks.
-- The official WhatsApp Business Platform / Cloud API is the preferred foundation for business messaging. It does not provide unrestricted access to personal conversations.
+- The official WhatsApp Business Platform / Cloud API is an alternative under evaluation. It does not provide unrestricted access to personal conversations; suitability depends on the use case still being clarified.
 - An official integration still needs tenant isolation, secure credential handling, retention controls, and authorization outside the AI model.
 - OrgWorkspace's exact AI use case must be checked against current platform terms. Official API availability does not establish eligibility for every AI product.
 - Treat the pricing below as a planning estimate, not a verified Meta quotation: current public sources conflict about service-message charges.
@@ -47,7 +49,9 @@ History synchronization is best effort. The full-history pairing flag requests 3
 
 Line references refer to the supplied `main.go` snapshot.
 
-| Priority | Verified observation | Required response |
+These are research findings and possible mitigations, not approved fixes. Action-oriented suggestions below describe options for future evaluation.
+
+| Priority | Verified observation | Potential mitigation for evaluation |
 |---|---|---|
 | High | Revokes stamp `deleted_at` while deliberately preserving content; `GetMessages` does not exclude it (`858–878`). | Define deletion semantics; remove inaccessible content from retrieval, media, indexes, embeddings, and downstream copies. |
 | High | Live and historical message bodies are logged (`2036–2040`, `3566–3567`, `3639–3644`). | Remove content logging; assess existing logs, access, and retention. |
@@ -153,7 +157,9 @@ Monthly total = Meta delivery charges
 
 Internal searches/tool calls are not automatically WhatsApp billable messages. They still consume OrgWorkspace infrastructure and possibly AI tokens. Estimate AI costs from measured tokens per interaction and actual model rates; no model or workload has been specified.
 
-## 8. Recommended secure architecture
+## 8. Candidate architecture — if the Business API is selected
+
+This is an evaluation option, not an approved implementation plan. Clarify personal-account requirements before selecting an architecture.
 
 ```text
 Supported business onboarding → connection registry + secret manager
@@ -166,7 +172,7 @@ Agent proposes action → authorization + consent + service-window checks
   → Cloud API → status webhooks → audit and delivery state
 ```
 
-| Control | Implementation requirement |
+| Control | Candidate safeguard |
 |---|---|
 | Tenant isolation | Immutable account/number-to-workspace mapping; database and object access enforcement. Resolve ownership from trusted platform state |
 | Credentials | Secret manager, least privilege, rotation, revocation; never expose tokens/session files to agents |
@@ -191,21 +197,22 @@ Customer-facing multi-tenant onboarding may require provider/Tech Provider setup
 | Maintenance | High: protocol changes and custom fork | Version upgrades and policy changes remain | Named owner, upgrade process, operational budget |
 | AI misuse | High if unrestricted tools are exposed | Equally serious without action controls | Scoped retrieval, external authorization, approval |
 
-## 10. Practical next steps and decision gates
+## 10. Ongoing research and decision gates
 
-1. **Contain current exposure:** inventory connected accounts, volumes, routes, logs, backups, webhook destinations, and account/workspace mappings. Review existing customer commitments.
+1. **Clarify the personal WhatsApp need and priority:** identify the user problem, essential personal-account capabilities, and why business messaging or selected-data alternatives would not meet it. Inventory current deployment boundaries as read-only research.
 2. **Obtain missing production code:** authentication, webhook, media-path and history helpers; exact Go/Python dependencies; gateway and deployment configuration.
 3. **Confirm product scope:** business support/notifications versus personal knowledge access; new messages versus history; drafts versus autonomous sends.
 4. **Verify platform eligibility and billing:** effective terms, target markets, current rate card, account limits, supported onboarding/coexistence features.
-5. **Run an official pilot:** one test business number → verified webhook → isolated storage → AI draft → approved send → delivery tracking.
-6. **Test release gates:** cross-tenant denial, invalid signatures, duplicate events, lost responses, credential revocation, deletion, queue failure, and spend limits.
+5. **Compare alternatives:** assess the personal bridge, Business API, dedicated-agent interactions, and selected-data approaches against the clarified requirements. No pilot is selected yet.
+6. **Document future validation needs:** cross-tenant denial, invalid signatures, duplicate events, lost responses, credential revocation, deletion, queue failure, and spend limits. Implementation and testing scope require a later decision.
 7. **Measure costs:** recipients by market/category, incoming/outgoing volume, replies per interaction, AI tokens, attachment storage, and operations effort.
 
-If an unofficial POC remains necessary: internal consenting participants, isolated account workers/volumes, short retention, selected chats, history off by default, bounded media, approved sends, and a kill switch. These safeguards do **not** make it Meta-authorized or prevent account restrictions.
+If a personal-account POC is later selected, potential safeguards include internal consenting participants, isolated account workers/volumes, short retention, selected chats, history off by default, bounded media, approved sends, and a kill switch. These safeguards do **not** make it Meta-authorized or prevent account restrictions. No POC has been approved through this study.
 
 ### Questions requiring an owner
 
-- Which exact capabilities are mandatory, and is a business account acceptable?
+- Why is personal WhatsApp specifically needed, and what is its priority?
+- Which exact capabilities require a personal account, and could business messaging or selected-data alternatives meet the same need?
 - Who owns each business account, billing relationship, and connected number?
 - Is OrgWorkspace's specific AI offering eligible in target markets?
 - What are expected numbers of connections, peak traffic, proactive recipients, and monthly messages?
@@ -213,11 +220,11 @@ If an unofficial POC remains necessary: internal consenting participants, isolat
 - Who approves sending, supports incidents, and maintains the connector?
 - What happens on revocation, deletion requests, provider suspension, or unexpected charges?
 
-## 11. Recommendation
+## 11. Current position — decision pending
 
-**Proceed with restrictions:** build an official, narrowly scoped business-messaging pilot. Start with new incoming messages, controlled retrieval, and human-approved replies. Confirm eligibility, pricing, isolation, and deletion before customer rollout.
+**Research remains active.** The immediate next step is to understand why personal WhatsApp is required and how important that requirement is. No choice between personal WhatsApp, the Business API, or another approach has been made.
 
-**Do not expand the current personal bridge as-is.** It is technically functional, but the supplied code and missing deployment evidence do not establish production security or platform authorization.
+The findings identify risks and candidate safeguards; they do not approve or reject an integration approach. Once the use case is clarified, compare feasibility, security, privacy, policy, reliability, and cost. Code fixes, migrations, and pilots remain outside the current research scope.
 
 ### Source index and access limitations
 
